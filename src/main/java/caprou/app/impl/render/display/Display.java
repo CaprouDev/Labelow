@@ -1,0 +1,166 @@
+package caprou.app.impl.render.display;
+
+
+import caprou.app.impl.render.SimpleRenderer;
+import caprou.app.impl.render.image.ImageObject;
+import caprou.app.impl.render.shader.ShaderManager;
+import lombok.Getter;
+import org.lwjgl.glfw.GLFWErrorCallback;
+import org.lwjgl.glfw.GLFWVidMode;
+import org.lwjgl.opengl.GL;
+import org.lwjgl.system.MemoryStack;
+
+import java.awt.*;
+import java.io.IOException;
+import java.nio.IntBuffer;
+
+import static java.lang.System.exit;
+import static org.lwjgl.glfw.Callbacks.glfwFreeCallbacks;
+import static org.lwjgl.glfw.GLFW.*;
+import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.system.MemoryStack.stackPush;
+import static org.lwjgl.system.MemoryUtil.NULL;
+
+// https://www.lwjgl.org/guide
+public class Display {
+    @Getter private long window;
+    @Getter private int width, height;
+    @Getter private String title;
+    private boolean vsync = true;
+
+    //framerate
+    private double lastTime;
+    private int frames;
+    @Getter
+    private double fps;
+
+    //tick
+    final double TICKS = 10.0;
+    final double tickRate = 1.0 / TICKS;
+    double lastTick = glfwGetTime();
+
+    private final ImageObject test = new ImageObject("temp.png");
+
+    public Display(final String title, final int width, final int height) {
+        this.width = width;
+        this.height = height;
+        this.title = title;
+    }
+
+    public void run() throws IOException {
+        init();
+        loop();
+        cleanup();
+    }
+
+    public void init() throws IOException {
+        GLFWErrorCallback.createPrint(System.err).set();
+
+        if(!glfwInit())
+            throw new IllegalStateException("Unable to initialize GLFW");
+
+        glfwDefaultWindowHints();
+        glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+        glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+
+        window = glfwCreateWindow(width, height, title, NULL, NULL);
+        if (window == NULL)
+            glfwSetWindowShouldClose(window, true);
+
+
+        // resize event
+        glfwSetWindowSizeCallback(window, (window, width, height) -> {
+            this.width = width;
+            this.height = height;
+        });
+
+        try (MemoryStack stack = stackPush()) {
+            final IntBuffer pWidth = stack.mallocInt(1);
+            final IntBuffer pHeight = stack.mallocInt(1);
+            glfwGetWindowSize(window, pWidth, pHeight);
+
+            final GLFWVidMode vidMode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+            if (vidMode == null) throw new RuntimeException("Video mode failed to initialize.");
+            glfwSetWindowPos(window,
+                    (vidMode.width() - pWidth.get(0)) / 2,
+                    (vidMode.height() - pHeight.get(0)) / 2);
+        }
+
+        glfwMakeContextCurrent(window);
+        glfwSwapInterval(vsync ? 1 : 0);
+        glfwShowWindow(window);
+
+        GL.createCapabilities();
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+
+        ShaderManager.compileShaders();
+
+        setWindowTitle(title);
+        lastTime = glfwGetTime();
+
+        //initGlobalKeyHook();
+    }
+
+
+    private void loop() {
+
+        while(!glfwWindowShouldClose(window)) {
+            glViewport(0,0,width,height);
+
+            glMatrixMode(GL_PROJECTION);
+            glLoadIdentity();
+            glOrtho(0,width,height,0,1,-1);
+            glMatrixMode(GL_MODELVIEW);
+            glLoadIdentity();
+
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            glClearColor(0.0f,0.0f,0.0f,1.0f);
+
+            final double[] xpos = new double[1];
+            final double[] ypos = new double[1];
+            glfwGetCursorPos(window, xpos, ypos); // Pass mouseX -> xpos --- mouseY -> ypos
+
+            //HOOK pour le render ici
+
+            //FIN DU HOOK
+
+            double currentTime = glfwGetTime();
+            while (currentTime - lastTick >= tickRate) {
+
+                //ontick event
+
+                lastTick += tickRate;
+            }
+
+            frames++;
+            if (currentTime - lastTime >= 1.0) {
+                fps = frames / (currentTime - lastTime); //Update fps counter every sec
+                frames = 0;
+                lastTime = currentTime;
+            }
+
+            glfwSwapBuffers(window);
+            glfwPollEvents();
+        }
+    }
+
+    private void cleanup() {
+        glfwFreeCallbacks(window);
+        glfwDestroyWindow(window);
+        glfwTerminate();
+        glfwSetErrorCallback(null).free();
+        exit(0);
+    }
+
+
+    public void setWindowTitle(final String title) {
+        if (window != NULL) {
+            this.title = title;
+            glfwSetWindowTitle(window, title);
+        }
+    }
+
+
+}
