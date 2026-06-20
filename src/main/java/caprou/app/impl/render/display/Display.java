@@ -4,7 +4,9 @@ package caprou.app.impl.render.display;
 import caprou.app.impl.render.SimpleRenderer;
 import caprou.app.impl.render.image.ImageObject;
 import caprou.app.impl.render.shader.ShaderManager;
+import caprou.app.impl.util.file.FileUtil;
 import lombok.Getter;
+import org.lwjgl.BufferUtils;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.opengl.GL;
@@ -12,6 +14,7 @@ import org.lwjgl.system.MemoryStack;
 
 import java.awt.*;
 import java.io.IOException;
+import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 
 import static java.lang.System.exit;
@@ -39,7 +42,9 @@ public class Display {
     final double tickRate = 1.0 / TICKS;
     double lastTick = glfwGetTime();
 
-    private final ImageObject test = new ImageObject("temp.png");
+    SimpleRenderer renderer = SimpleRenderer.getInstance();
+
+    private final ImageObject image = new ImageObject("temp.png");
 
     public Display(final String title, final int width, final int height) {
         this.width = width;
@@ -47,16 +52,16 @@ public class Display {
         this.title = title;
     }
 
-    public void run() throws IOException {
+    public void run() {
         init();
         loop();
         cleanup();
     }
 
-    public void init() throws IOException {
+    public void init() {
         GLFWErrorCallback.createPrint(System.err).set();
 
-        if(!glfwInit())
+        if(!glfwInit()) // ça initialise ici, le bool return si ça sest bien passé c tt
             throw new IllegalStateException("Unable to initialize GLFW");
 
         glfwDefaultWindowHints();
@@ -64,6 +69,7 @@ public class Display {
         glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
         window = glfwCreateWindow(width, height, title, NULL, NULL);
+
         if (window == NULL)
             glfwSetWindowShouldClose(window, true);
 
@@ -72,7 +78,9 @@ public class Display {
         glfwSetWindowSizeCallback(window, (window, width, height) -> {
             this.width = width;
             this.height = height;
+            OrthographicProjection.updateProjection(width, height);
         });
+
 
         try (MemoryStack stack = stackPush()) {
             final IntBuffer pWidth = stack.mallocInt(1);
@@ -86,21 +94,23 @@ public class Display {
                     (vidMode.height() - pHeight.get(0)) / 2);
         }
 
-        glfwMakeContextCurrent(window);
+        glfwMakeContextCurrent(window); // passe le context => window
         glfwSwapInterval(vsync ? 1 : 0);
         glfwShowWindow(window);
 
-        GL.createCapabilities();
+        GL.createCapabilities(); // le main context opengl
+
+        image.load();
+
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-
         ShaderManager.compileShaders();
+        OrthographicProjection.updateProjection(width, height);
+        renderer.init();
 
         setWindowTitle(title);
         lastTime = glfwGetTime();
-
-        //initGlobalKeyHook();
     }
 
 
@@ -109,21 +119,15 @@ public class Display {
         while(!glfwWindowShouldClose(window)) {
             glViewport(0,0,width,height);
 
-            glMatrixMode(GL_PROJECTION);
-            glLoadIdentity();
-            glOrtho(0,width,height,0,1,-1);
-            glMatrixMode(GL_MODELVIEW);
-            glLoadIdentity();
-
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            glClearColor(0.0f,0.0f,0.0f,1.0f);
+            glClearColor(0.0f,0.0f,0.0f,1.0f); // black, 255 alpha
 
             final double[] xpos = new double[1];
             final double[] ypos = new double[1];
             glfwGetCursorPos(window, xpos, ypos); // Pass mouseX -> xpos --- mouseY -> ypos
 
             //HOOK pour le render ici
-
+            image.drawImg(10,10, 100,250, new Color(255,255,0));
             //FIN DU HOOK
 
             double currentTime = glfwGetTime();

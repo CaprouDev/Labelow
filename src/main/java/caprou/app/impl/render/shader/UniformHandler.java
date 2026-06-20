@@ -55,7 +55,11 @@ public final class UniformHandler {
 
     public void setUniformFb(String name, FloatBuffer fb) {
         final int location = getUniformLocation(name);
-        glUniform1fv(location, fb);
+        if (fb.capacity() == 16) {
+            glUniformMatrix4fv(location, false, fb);
+        } else {
+            glUniform1fv(location, fb);
+        }
     }
 
     public int getUniform(String name) {

@@ -1,10 +1,8 @@
 package caprou.app.impl.render.shader;
 
-
-
 import caprou.app.Main;
-import caprou.app.impl.render.SimpleRenderer;
 import caprou.app.impl.render.display.Display;
+import caprou.app.impl.render.util.RenderUtil;
 import caprou.app.impl.util.file.FileUtil;
 
 import java.io.IOException;
@@ -90,7 +88,7 @@ public class ShaderProgram {
     }
 
     public final void drawQuads(float x, float y, float width, float height) {
-        SimpleRenderer.render(GL_QUADS, () -> {
+        RenderUtil.render(GL_QUADS, () -> {
 
             glTexCoord2f(0, 0); glVertex2f(x, y);
             glTexCoord2f(0, 1); glVertex2f(x, y + height);

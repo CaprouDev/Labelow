@@ -5,7 +5,6 @@ import caprou.app.impl.render.shader.ShaderProgram;
 
 public interface Shaders {
     ShaderProgram textureShader = ShaderManager.shaders.get("texture");
-    ShaderProgram msdfShader = ShaderManager.shaders.get("msdf");
-    ShaderProgram roundedShader = ShaderManager.shaders.get("rounded");
+    ShaderProgram colorShader = ShaderManager.shaders.get("color");
 
 }

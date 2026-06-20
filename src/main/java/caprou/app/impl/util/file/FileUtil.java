@@ -1,6 +1,7 @@
 package caprou.app.impl.util.file;
 
 
+import caprou.app.Main;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
@@ -43,5 +44,10 @@ public final class FileUtil {
         }
 
         return stringBuilder.toString();
+    }
+
+
+    public static InputStream getInputStream(final String filename) {
+        return Main.class.getResourceAsStream(filename);
     }
 }

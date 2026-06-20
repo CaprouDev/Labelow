@@ -1,94 +1,64 @@
 package caprou.app.impl.render;
 
+
+import caprou.app.impl.interfaces.Shaders;
+import caprou.app.impl.render.image.Texture;
 import caprou.app.impl.util.render.ColorUtil;
-import org.lwjgl.opengl.GL11;
 
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.List;
 
-import static caprou.app.impl.util.render.ColorUtil.color;
-import static org.lwjgl.opengl.GL11.*;
-import static org.lwjgl.opengl.GL11.GL_BLEND;
+import static caprou.app.impl.render.display.OrthographicProjection.projection;
 
-public final class SimpleRenderer {
+public class SimpleRenderer implements Shaders {
+    private static SimpleRenderer instance;
 
-    private final List<float[]> vertices = new ArrayList<>();
+    public static SimpleRenderer getInstance() {
+        if (instance == null)
+            instance = new SimpleRenderer();
 
-    public void begin() {
-        vertices.clear();
+        return instance;
     }
 
-    public void posTexColor(float x, float y, float z, float u, float v, int r, int g, int b, int a) {
-        vertices.add(new float[] {
-                x, y, z,
-                u, v,
-                r / 255f, g / 255f, b / 255f, a / 255f
-        });
-    }
+    private Model quadModel;
 
-    public void draw() {
-        GL11.glBegin(GL11.GL_QUADS);
-        for (float[] v : vertices) {
-            GL11.glColor4f(v[5], v[6], v[7], v[8]);
-            GL11.glTexCoord2f(v[3], v[4]);
-            GL11.glVertex3f(v[0], v[1], v[2]);
-        }
-        GL11.glEnd();
+    private final float[] QUAD_VERTICES = {
+            0,0,  0,1,  1,1,
+            0,0,  1,1,  1,0,
+    };
+
+    private final float[] QUAD_UVS = {
+            0,0,  0,1,  1,1,
+            0,0,  1,1,  1,0,
+    };
+
+
+    public void init() {
+        quadModel = new Model(QUAD_VERTICES, QUAD_UVS);
     }
 
 
-    public static void render(final int mode, final Runnable render) {
-        GL11.glBegin(mode);
-        render.run();
-        GL11.glEnd();
+    public void drawRect(float x, float y, float width, float height, Color color) {
+        final float[] colors = ColorUtil.toGLColor(color);
+
+        colorShader.bind();
+        colorShader.setUniform("projection", projection);
+        colorShader.setUniform("transform", x, y, width, height);
+        colorShader.setUniform("color", colors[0],colors[1],colors[2],colors[3]);
+        quadModel.render();
+        colorShader.unbind();
     }
 
+    public void drawImage(float x, float y, float width, float height, Texture texture, Color color) {
+        final float[] colors = ColorUtil.toGLColor(color);
 
-    public static void translate(final Runnable run, final float x, final float y) {
-        GL11.glPushMatrix();
-        GL11.glTranslatef(x, y, 0);
-        run.run();
-
-        GL11.glPopMatrix();
+        textureShader.bind();
+        texture.bind();
+        textureShader.setUniform("projection", projection);
+        textureShader.setUniform("transform", x, y, width, height);
+        textureShader.setUniform("iChannel0", 0);
+        textureShader.setUniform("color", colors[0], colors[1], colors[2], colors[3]);
+        quadModel.render();
+        textureShader.unbind();
     }
-
-    public static void rotate(final Runnable run, final float x, final float y, final float angle) {
-        GL11.glPushMatrix();
-        GL11.glTranslatef(x, y, 0);
-        GL11.glRotatef(angle, 0, 0,1);
-        GL11.glTranslatef(-x, -y, 0);
-        run.run();
-
-        GL11.glPopMatrix();
-    }
-
-    public static void scale(Runnable run, float x, float y, float xScale, float yScale) {
-        GL11.glPushMatrix();
-        GL11.glTranslatef(x, y, 0);
-        GL11.glScalef(xScale, yScale, 1);
-        GL11.glTranslatef(-(x), -(y), 0);
-        run.run();
-
-        GL11.glPopMatrix();
-    }
-
-    public static void drawRect(final float x, final float y, final float width, final float height, final Color color) {
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-        color(color);
-        render(GL_QUADS, () -> {
-            glVertex2d(x, y);
-            glVertex2d(x + width, y);
-            glVertex2d(x + width, y + height);
-            glVertex2d(x, y + height);
-        });
-
-        glDisable(GL_BLEND);
-    }
-
-
-
 
 }
