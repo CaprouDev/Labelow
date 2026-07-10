@@ -2,19 +2,16 @@ package caprou.app.impl.render.display;
 
 
 import caprou.app.impl.render.SimpleRenderer;
-import caprou.app.impl.render.image.ImageObject;
+import caprou.app.impl.render.font.TrueTypeFont;
+import caprou.app.impl.render.font.TrueTypeFontReader;
 import caprou.app.impl.render.shader.ShaderManager;
 import caprou.app.impl.util.file.FileUtil;
 import lombok.Getter;
-import org.lwjgl.BufferUtils;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.system.MemoryStack;
 
-import java.awt.*;
-import java.io.IOException;
-import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 
 import static java.lang.System.exit;
@@ -29,9 +26,9 @@ public class Display {
     @Getter private long window;
     @Getter private int width, height;
     @Getter private String title;
-    private boolean vsync = true;
 
     //framerate
+    private final boolean vsync = false;
     private double lastTime;
     private int frames;
     @Getter
@@ -42,9 +39,8 @@ public class Display {
     final double tickRate = 1.0 / TICKS;
     double lastTick = glfwGetTime();
 
-    SimpleRenderer renderer = SimpleRenderer.getInstance();
+    private final SimpleRenderer renderer = SimpleRenderer.getInstance();
 
-    private final ImageObject image = new ImageObject("temp.png");
 
     public Display(final String title, final int width, final int height) {
         this.width = width;
@@ -100,8 +96,6 @@ public class Display {
 
         GL.createCapabilities(); // le main context opengl
 
-        image.load();
-
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -127,14 +121,14 @@ public class Display {
             glfwGetCursorPos(window, xpos, ypos); // Pass mouseX -> xpos --- mouseY -> ypos
 
             //HOOK pour le render ici
-            image.drawImg(10,10, 100,250, new Color(255,255,0));
+
+
             //FIN DU HOOK
 
             double currentTime = glfwGetTime();
             while (currentTime - lastTick >= tickRate) {
 
                 //ontick event
-
                 lastTick += tickRate;
             }
 
