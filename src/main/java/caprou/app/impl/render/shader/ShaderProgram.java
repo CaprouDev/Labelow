@@ -13,23 +13,29 @@ import static org.lwjgl.opengl.GL20.*;
 
 public class ShaderProgram {
     private static final String VERTEX_SHADER = "vertex.vert";
-    private final String fragmentShader;
+    private final String fragmentShader, vertexShader;
     private UniformHandler uniformHandler;
     private boolean compiled;
     private int programId;
     public long startTime;
 
-    public ShaderProgram(final String fragmentShader) {
+    public ShaderProgram(String fragmentShader) {
+        this(VERTEX_SHADER, fragmentShader);
+    }
+
+    public ShaderProgram(String vertexShader, String fragmentShader) {
+        this.vertexShader = vertexShader;
         this.fragmentShader = fragmentShader;
     }
 
     public void compile() {
-        this.programId = glCreateProgram();
+        if (compiled) return;
 
         try {
+            this.programId = glCreateProgram();
 
             final int fragmentShaderID = loadShader(getShaderStream(fragmentShader), GL_FRAGMENT_SHADER);
-            final int vertexShaderID = loadShader(getShaderStream(VERTEX_SHADER), GL_VERTEX_SHADER);
+            final int vertexShaderID = loadShader(getShaderStream(vertexShader), GL_VERTEX_SHADER);
 
             glAttachShader(programId, fragmentShaderID);
             glAttachShader(programId, vertexShaderID);
@@ -62,12 +68,22 @@ public class ShaderProgram {
         return shaderId;
     }
 
+    public void delete() {
+        if (programId != 0) {
+            glDeleteProgram(programId);
+            programId = 0;
+        }
+        compiled = false;
+    }
+
     private void validateProgram() {
         final int status = glGetProgrami(programId, GL_LINK_STATUS);
         if(status == 0) throw new RuntimeException(glGetProgramInfoLog(programId));
     }
 
     public final void bind() {
+        if (!compiled) throw new IllegalStateException("Le shader n'est pas compilé.");
+
         glUseProgram(programId);
     }
 

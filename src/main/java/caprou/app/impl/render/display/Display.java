@@ -4,6 +4,9 @@ package caprou.app.impl.render.display;
 import caprou.app.impl.render.SimpleRenderer;
 import caprou.app.impl.render.font.TrueTypeFont;
 import caprou.app.impl.render.font.TrueTypeFontReader;
+import caprou.app.impl.render.font.renderer.FontManager;
+import caprou.app.impl.render.font.renderer.Fonts;
+import caprou.app.impl.render.font.renderer.GpuTextRenderer;
 import caprou.app.impl.render.shader.ShaderManager;
 import caprou.app.impl.util.file.FileUtil;
 import lombok.Getter;
@@ -12,6 +15,8 @@ import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.system.MemoryStack;
 
+import java.awt.*;
+import java.io.InputStream;
 import java.nio.IntBuffer;
 
 import static java.lang.System.exit;
@@ -103,13 +108,14 @@ public class Display {
         OrthographicProjection.updateProjection(width, height);
         renderer.init();
 
+        FontManager.initAll();
+
         setWindowTitle(title);
         lastTime = glfwGetTime();
     }
 
 
     private void loop() {
-
         while(!glfwWindowShouldClose(window)) {
             glViewport(0,0,width,height);
 
@@ -122,6 +128,11 @@ public class Display {
 
             //HOOK pour le render ici
 
+            FontManager.beginFrame();
+
+            // statique 4000 fps g pas le cout en ms
+            Fonts.INTER.drawString("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ012345678910àé&'(-è_çàà)=$ù*!:", 10,10,16, -1);
+            Fonts.MIAMA.drawString("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ012345678910àé&'(-è_çàà)=$ù*!:", 10 ,35 ,50, -1);
 
             //FIN DU HOOK
 
@@ -137,6 +148,7 @@ public class Display {
                 fps = frames / (currentTime - lastTime); //Update fps counter every sec
                 frames = 0;
                 lastTime = currentTime;
+                System.out.println("" + getFps());
             }
 
             glfwSwapBuffers(window);
@@ -145,6 +157,7 @@ public class Display {
     }
 
     private void cleanup() {
+        ShaderManager.deleteShaders();
         glfwFreeCallbacks(window);
         glfwDestroyWindow(window);
         glfwTerminate();

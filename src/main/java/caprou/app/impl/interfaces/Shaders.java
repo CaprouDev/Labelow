@@ -4,9 +4,10 @@ import caprou.app.impl.render.shader.ShaderManager;
 import caprou.app.impl.render.shader.ShaderProgram;
 
 public interface Shaders {
-    ShaderProgram textureShader = ShaderManager.shaders.get("texture");
-    ShaderProgram colorShader = ShaderManager.shaders.get("color");
-    ShaderProgram roundShader = ShaderManager.shaders.get("rounded");
-    ShaderProgram circleShader = ShaderManager.shaders.get("circle");
-
+    ShaderProgram textureShader = ShaderManager.get("texture");
+    ShaderProgram colorShader = ShaderManager.get("color");
+    ShaderProgram roundShader = ShaderManager.get("rounded");
+    ShaderProgram circleShader = ShaderManager.get("circle");
+    ShaderProgram textShader = ShaderManager.get("text");
+    ShaderProgram glyphRasterShader = ShaderManager.get("glyph-raster");
 }
