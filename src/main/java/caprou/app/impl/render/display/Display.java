@@ -2,13 +2,11 @@ package caprou.app.impl.render.display;
 
 
 import caprou.app.impl.render.SimpleRenderer;
-import caprou.app.impl.render.font.TrueTypeFont;
-import caprou.app.impl.render.font.TrueTypeFontReader;
+import caprou.app.impl.render.animation.Animation;
+import caprou.app.impl.render.animation.Easing;
 import caprou.app.impl.render.font.renderer.FontManager;
 import caprou.app.impl.render.font.renderer.Fonts;
-import caprou.app.impl.render.font.renderer.GpuTextRenderer;
 import caprou.app.impl.render.shader.ShaderManager;
-import caprou.app.impl.util.file.FileUtil;
 import lombok.Getter;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWVidMode;
@@ -16,7 +14,6 @@ import org.lwjgl.opengl.GL;
 import org.lwjgl.system.MemoryStack;
 
 import java.awt.*;
-import java.io.InputStream;
 import java.nio.IntBuffer;
 
 import static java.lang.System.exit;
@@ -45,6 +42,8 @@ public class Display {
     double lastTick = glfwGetTime();
 
     private final SimpleRenderer renderer = SimpleRenderer.getInstance();
+
+    private Animation animation = new Animation(Easing.EASE_IN_OUT_BACK, 1500);
 
 
     public Display(final String title, final int width, final int height) {
@@ -110,6 +109,7 @@ public class Display {
 
         FontManager.initAll();
 
+
         setWindowTitle(title);
         lastTime = glfwGetTime();
     }
@@ -130,9 +130,10 @@ public class Display {
 
             FontManager.beginFrame();
 
-            // statique 4000 fps g pas le cout en ms
-            Fonts.INTER.drawString("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ012345678910àé&'(-è_çàà)=$ù*!:", 10,10,16, -1);
-            Fonts.MIAMA.drawString("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ012345678910àé&'(-è_çàà)=$ù*!:", 10 ,35 ,50, -1);
+            animation.loop(0,1);
+
+            renderer.drawRect(10,10,100,30,new Color(255,0,0));
+            Fonts.INTER.animateSize(30 + (float) animation.getValue() * 10).drawString("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ012345678910àé&'(-è_çàà)=$ù*!:", 10, 10, -1);
 
             //FIN DU HOOK
 

@@ -32,6 +32,9 @@ public final class GpuTextRenderer {
 
     private static final int SAMPLES_PER_PASS = 4;
     private static final int MAX_ACCUMULATED_SAMPLES = 128;
+    private static final int MAX_ANIMATED_SAMPLES = 16;
+
+    public static final float DEFAULT_ANIMATED_RASTER_SIZE = 64.0f;
 
     private static final float[] QUAD_VERTICES = {
             0, 0,  0, 1,  1, 1,
@@ -56,6 +59,8 @@ public final class GpuTextRenderer {
     @Getter
     @Setter
     private boolean rgbSubpixel = true;
+    @Getter
+    private float animatedRasterSize = DEFAULT_ANIMATED_RASTER_SIZE;
     private long frameId;
 
     public GpuTextRenderer(TrueTypeFont font) {
@@ -78,20 +83,112 @@ public final class GpuTextRenderer {
         frameId++;
     }
 
+    public void setAnimatedRasterSize(float animatedRasterSize) {
+        this.animatedRasterSize = validateSize(animatedRasterSize);
+    }
+
+    public void warmupAnimated(String text) {
+        if (text == null || text.isEmpty()) return;
+
+        final float rasterSize = animatedRasterSize;
+        final float rasterScale = rasterSize / font.getUnitsPerEm();
+        final int size64 = Math.round(rasterSize * SIZE_STEPS);
+
+        atlas.setLinearFiltering(true);
+
+        try {
+            for (int index = 0; index < text.length();) {
+                final int codePoint = text.codePointAt(index);
+                index += Character.charCount(codePoint);
+
+                if (codePoint == '\r' || codePoint == '\n' || codePoint == '\t') {
+                    continue;
+                }
+
+                final Glyph glyph = font.glyphs().get(glyphIndex(codePoint));
+                if (glyph == null || glyph.getSegments() == null || glyph.getSegments().isEmpty()) {
+                    continue;
+                }
+
+                final GlyphCacheKey key = new GlyphCacheKey(
+                        glyph.getIndex(), size64, 0, 0, false
+                );
+
+                CachedGlyph cachedGlyph = cache.get(key);
+                if (cachedGlyph == null) {
+                    cachedGlyph = allocateGlyph(key, glyph, rasterScale, 0.0f, 0.0f);
+                    cache.put(key, cachedGlyph);
+                }
+
+                while (cachedGlyph.accumulatedSamples < MAX_ANIMATED_SAMPLES) {
+                    refineGlyph(glyph, cachedGlyph, MAX_ANIMATED_SAMPLES);
+                }
+            }
+        } finally {
+            textShader.unbind();
+        }
+    }
+
     public void drawString(String text, float x, float y, float fontSize, Color color) {
         final float quantizedSize = quantizeSize(fontSize);
         final float scale = quantizedSize / font.getUnitsPerEm();
         final float baseline = y + font.getAscent() * scale;
-        drawStringBaselineInternal(text, x, baseline, quantizedSize, scale, color);
+
+        drawStringBaselineInternal(
+                text, x, baseline,
+                scale, quantizedSize, scale,
+                false, color
+        );
     }
 
     public void drawStringBaseline(String text, float x, float baselineY, float fontSize, Color color) {
         final float quantizedSize = quantizeSize(fontSize);
         final float scale = quantizedSize / font.getUnitsPerEm();
-        drawStringBaselineInternal(text, x, baselineY, quantizedSize, scale, color);
+
+        drawStringBaselineInternal(
+                text, x, baselineY,
+                scale, quantizedSize, scale,
+                false, color
+        );
     }
 
-    private void drawStringBaselineInternal(String text, float startX, float startBaseline, float quantizedSize, float scale, Color color) {
+    public void drawStringAnimated(String text, float x, float y, float fontSize, Color color) {
+        final float displaySize = validateSize(fontSize);
+        final float displayScale = displaySize / font.getUnitsPerEm();
+        final float rasterSize = animatedRasterSize;
+        final float rasterScale = rasterSize / font.getUnitsPerEm();
+        final float baseline = y + font.getAscent() * displayScale;
+
+        drawStringBaselineInternal(
+                text, x, baseline,
+                displayScale, rasterSize, rasterScale,
+                true, color
+        );
+    }
+
+    public void drawStringBaselineAnimated(String text, float x, float baselineY, float fontSize, Color color) {
+        final float displaySize = validateSize(fontSize);
+        final float displayScale = displaySize / font.getUnitsPerEm();
+        final float rasterSize = animatedRasterSize;
+        final float rasterScale = rasterSize / font.getUnitsPerEm();
+
+        drawStringBaselineInternal(
+                text, x, baselineY,
+                displayScale, rasterSize, rasterScale,
+                true, color
+        );
+    }
+
+    private void drawStringBaselineInternal(
+            String text,
+            float startX,
+            float startBaseline,
+            float displayScale,
+            float rasterSize,
+            float rasterScale,
+            boolean animated,
+            Color color
+    ) {
         if (text == null || text.isEmpty() || color.getAlpha() == 0)
             return;
 
@@ -104,10 +201,18 @@ public final class GpuTextRenderer {
         glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
         glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
+        atlas.setLinearFiltering(animated);
+
         textShader.bind();
         textShader.setUniform("projection", OrthographicProjection.projection);
         textShader.setUniform("atlas", 0);
-        textShader.setUniform("color", color.getRed() / 255.0f, color.getGreen() / 255.0f, color.getBlue() / 255.0f, color.getAlpha() / 255.0f); //colorutil
+        textShader.setUniform(
+                "color",
+                color.getRed() / 255.0f,
+                color.getGreen() / 255.0f,
+                color.getBlue() / 255.0f,
+                color.getAlpha() / 255.0f
+        );
         atlas.bindTexture(0);
 
         try {
@@ -118,32 +223,32 @@ public final class GpuTextRenderer {
                 if (codePoint == '\r') continue;
                 if (codePoint == '\n') {
                     penX = startX;
-                    baseline += lineHeight(quantizedSize);
+                    baseline += lineHeightForScale(displayScale);
                     previousGlyphIndex = -1;
                     continue;
                 }
 
-
                 if (codePoint == '\t') {
-                    penX += glyphAdvance(glyphIndex(' '), scale) * 4.0f;
+                    penX += glyphAdvance(glyphIndex(' '), displayScale) * 4.0f;
                     previousGlyphIndex = -1;
                     continue;
                 }
 
                 final int glyphIndex = glyphIndex(codePoint);
-                Glyph glyph = font.glyphs().get(glyphIndex);
+                final Glyph glyph = font.glyphs().get(glyphIndex);
                 if (glyph == null) continue;
 
                 if (previousGlyphIndex >= 0) {
                     final short kern = font.kerning().getOrDefault(KerningReader.kernKey(previousGlyphIndex, glyphIndex), (short) 0);
-                    penX += kern * scale;
+
+                    penX += kern * displayScale;
                 }
 
                 if (glyph.getSegments() != null && !glyph.getSegments().isEmpty()) {
-                    drawGlyph(glyph, penX, baseline, quantizedSize, scale);
+                    drawGlyph(glyph, penX, baseline, displayScale, rasterSize, rasterScale, animated);
                 }
 
-                penX += glyph.getAdvanceWidth() * scale;
+                penX += glyph.getAdvanceWidth() * displayScale;
                 previousGlyphIndex = glyphIndex;
             }
         } finally {
@@ -152,32 +257,66 @@ public final class GpuTextRenderer {
         }
     }
 
-    private void drawGlyph(Glyph glyph, float penX, float baseline, float size, float scale) {
-        final float glyphLeft = penX + glyph.getXMin() * scale;
-        final float glyphTop = baseline - glyph.getYMax() * scale;
+    private void drawGlyph(final Glyph glyph, float penX, float baseline, float displayScale, float rasterSize, float rasterScale, boolean animated) {
+        final float glyphLeft = penX + glyph.getXMin() * displayScale;
+        final float glyphTop = baseline - glyph.getYMax() * displayScale;
 
-        final QuantizedPosition xPosition = quantizePosition(glyphLeft);
-        final QuantizedPosition yPosition = quantizePosition(glyphTop);
+        final GlyphCacheKey key;
+        final float rasterOffsetX;
+        final float rasterOffsetY;
+        final QuantizedPosition xPosition;
+        final QuantizedPosition yPosition;
 
-        final int size64 = Math.round(size * SIZE_STEPS);
-        final GlyphCacheKey key = new GlyphCacheKey(glyph.getIndex(), size64, xPosition.step(), yPosition.step(), rgbSubpixel);
+        if (animated) {
+            key = new GlyphCacheKey(glyph.getIndex(), Math.round(rasterSize * SIZE_STEPS), 0, 0, false);
+            rasterOffsetX = 0.0f;
+            rasterOffsetY = 0.0f;
+            xPosition = null;
+            yPosition =
+                    null;
+        } else {
+            xPosition = quantizePosition(glyphLeft);
+            yPosition = quantizePosition(glyphTop);
+            rasterOffsetX = xPosition.fraction();
+            rasterOffsetY = yPosition.fraction();
+            key = new GlyphCacheKey(glyph.getIndex(), Math.round(rasterSize * SIZE_STEPS), xPosition.step(), yPosition.step(), rgbSubpixel);
+        }
 
         CachedGlyph cachedGlyph = cache.get(key);
         if (cachedGlyph == null) {
-            cachedGlyph = allocateGlyph(key, glyph, scale, xPosition.fraction(), yPosition.fraction());
+
+            cachedGlyph = allocateGlyph(key, glyph, rasterScale, rasterOffsetX, rasterOffsetY);
             cache.put(key, cachedGlyph);
         }
 
-        if (cachedGlyph.accumulatedSamples < MAX_ACCUMULATED_SAMPLES
+        final int targetSamples = animated ? MAX_ANIMATED_SAMPLES : MAX_ACCUMULATED_SAMPLES;
+
+        if (cachedGlyph.accumulatedSamples < targetSamples
                 && cachedGlyph.lastRefinedFrame != frameId) {
-            refineGlyph(glyph, cachedGlyph);
+            refineGlyph(glyph, cachedGlyph, targetSamples);
         }
 
         final AtlasRegion region = cachedGlyph.region;
-        final float drawX = xPosition.basePixel() - GLYPH_PADDING;
-        final float drawY = yPosition.basePixel() - GLYPH_PADDING;
+        final float drawX;
+        final float drawY;
+        final float drawWidth;
+        final float drawHeight;
 
-        textShader.setUniform("transform", drawX, drawY, (float) region.width(), (float) region.height());
+        if (animated) {
+            final float textureToDisplayScale = displayScale / cachedGlyph.fontScale;
+
+            drawX = glyphLeft - (GLYPH_PADDING + cachedGlyph.offsetX) * textureToDisplayScale;
+            drawY = glyphTop - (GLYPH_PADDING + cachedGlyph.offsetY) * textureToDisplayScale;
+            drawWidth = region.width() * textureToDisplayScale;
+            drawHeight = region.height() * textureToDisplayScale;
+        } else {
+            drawX = xPosition.basePixel() - GLYPH_PADDING;
+            drawY = yPosition.basePixel() - GLYPH_PADDING;
+            drawWidth = region.width();
+            drawHeight = region.height();
+        }
+
+        textShader.setUniform("transform", drawX, drawY, drawWidth, drawHeight);
 
         final float u0 = region.x() / (float) atlas.getWidth();
         final float v0 = region.y() / (float) atlas.getHeight();
@@ -209,12 +348,12 @@ public final class GpuTextRenderer {
         return new CachedGlyph(key, region, scale, offsetX, offsetY);
     }
 
-    private void refineGlyph(Glyph glyph, CachedGlyph cachedGlyph) {
+    private void refineGlyph(Glyph glyph, CachedGlyph cachedGlyph, int targetSamples) {
         final int curveCount = curveBuffer.upload(glyph);
         if (curveCount == 0) return;
 
         final AtlasRegion region = cachedGlyph.region;
-        final int remaining = MAX_ACCUMULATED_SAMPLES - cachedGlyph.accumulatedSamples;
+        final int remaining = targetSamples - cachedGlyph.accumulatedSamples;
         final int samplesThisPass = Math.min(SAMPLES_PER_PASS, remaining);
         final int previousFramebuffer = glGetInteger(GL_FRAMEBUFFER_BINDING);
         final boolean scissorWasEnabled = glIsEnabled(GL_SCISSOR_TEST);
@@ -296,14 +435,22 @@ public final class GpuTextRenderer {
     }
 
     public float measureWidth(String text, float fontSize) {
-        if (text == null || text.isEmpty()) return 0.0f;
-
         final float size = quantizeSize(fontSize);
-        final float scale = size / font.getUnitsPerEm();
+        return measureWidthForScale(text, size / font.getUnitsPerEm());
+    }
+
+    public float measureWidthAnimated(String text, float fontSize) {
+        final float size = validateSize(fontSize);
+        return measureWidthForScale(text, size / font.getUnitsPerEm());
+    }
+
+    private float measureWidthForScale(String text, float scale) {
+        if (text == null || text.isEmpty()) return 0.0f;
 
         float lineWidth = 0.0f;
         float maxWidth = 0.0f;
         int previousGlyph = -1;
+
         for (int index = 0; index < text.length();) {
             final int codePoint = text.codePointAt(index);
             index += Character.charCount(codePoint);
@@ -342,7 +489,15 @@ public final class GpuTextRenderer {
 
     public float lineHeight(float fontSize) {
         final float size = quantizeSize(fontSize);
-        final float scale = size / font.getUnitsPerEm();
+        return lineHeightForScale(size / font.getUnitsPerEm());
+    }
+
+    public float lineHeightAnimated(float fontSize) {
+        final float size = validateSize(fontSize);
+        return lineHeightForScale(size / font.getUnitsPerEm());
+    }
+
+    private float lineHeightForScale(float scale) {
         return (font.getAscent() - font.getDescent() + font.getLineGap()) * scale;
     }
 
@@ -356,10 +511,15 @@ public final class GpuTextRenderer {
     }
 
     private float quantizeSize(float size) {
-        if (!(size > 0.0f) || Float.isInfinite(size) || Float.isNaN(size))
-            throw new IllegalArgumentException("taille de texte invalide : " + size);
+        final float validSize = validateSize(size);
+        return Math.max(1, Math.round(validSize * SIZE_STEPS)) / (float) SIZE_STEPS;
+    }
 
-        return Math.max(1, Math.round(size * SIZE_STEPS)) / (float) SIZE_STEPS;
+    private float validateSize(float size) {
+        if (!(size > 0.0f) || Float.isInfinite(size) || Float.isNaN(size))
+            System.err.println("SKIP : Taille de texte invalide : " + size);
+
+        return size;
     }
 
     private QuantizedPosition quantizePosition(float value) {
@@ -424,20 +584,12 @@ public final class GpuTextRenderer {
         atlas.delete();
     }
 
-    private record QuantizedPosition(int basePixel, int step, float fraction) {
-    }
+    private record QuantizedPosition(int basePixel, int step, float fraction) { /* */ }
 
     private record BlendState(
-            boolean enabled,
-            int srcRgb,
-            int dstRgb,
-            int srcAlpha,
-            int dstAlpha,
-            int equationRgb,
-            int equationAlpha,
-            float colorR,
-            float colorG,
-            float colorB,
-            float colorA
-    ) { }
+
+            boolean enabled, int srcRgb, int dstRgb, int srcAlpha, int dstAlpha, int equationRgb,
+            int equationAlpha, float colorR, float colorG, float colorB, float colorA)
+
+    {/* */}
 }

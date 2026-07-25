@@ -23,8 +23,11 @@ public final class Font {
 
     @Getter
     private boolean rgbSubpixel = true;
+    @Getter
+    private float animatedRasterSize = GpuTextRenderer.DEFAULT_ANIMATED_RASTER_SIZE;
     private TrueTypeFont trueTypeFont;
     private GpuTextRenderer renderer;
+    private final AnimatedSize animatedSizeView = new AnimatedSize();
 
     public Font(String source) {
         this(source, GpuTextRenderer.DEFAULT_ATLAS_SIZE);
@@ -53,6 +56,7 @@ public final class Font {
             trueTypeFont = new TrueTypeFontReader().parseFont(stream);
             renderer = new GpuTextRenderer(trueTypeFont, atlasSize);
             renderer.setRgbSubpixel(rgbSubpixel);
+            renderer.setAnimatedRasterSize(animatedRasterSize);
         } catch (Exception exception) {
             trueTypeFont = null;
             renderer = null;
@@ -85,12 +89,44 @@ public final class Font {
         drawStringBaseline(text, x, baselineY, size, new Color(argb, true));
     }
 
+    public void drawStringAnimated(String text, float x, float y, float size, Color color) {
+        requireColor(color);
+        requireRenderer().drawStringAnimated(text, x, y, size, color);
+    }
+
+    public void drawStringAnimated(String text, float x, float y, float size, int argb) {
+        drawStringAnimated(text, x, y, size, new Color(argb, true));
+    }
+
+    public void drawStringBaselineAnimated(String text, float x, float baselineY, float size, Color color) {
+        requireColor(color);
+        requireRenderer().drawStringBaselineAnimated(text, x, baselineY, size, color);
+    }
+
+    public void drawStringBaselineAnimated(String text, float x, float baselineY, float size, int argb) {
+        drawStringBaselineAnimated(text, x, baselineY, size, new Color(argb, true));
+    }
+
+    public AnimatedSize animateSize(float size) {
+        requireValidSize(size);
+        animatedSizeView.size = size;
+        return animatedSizeView;
+    }
+
     public float measureWidth(String text, float size) {
         return requireRenderer().measureWidth(text, size);
     }
 
     public float lineHeight(float size) {
         return requireRenderer().lineHeight(size);
+    }
+
+    public float measureWidthAnimated(String text, float size) {
+        return requireRenderer().measureWidthAnimated(text, size);
+    }
+
+    public float lineHeightAnimated(float size) {
+        return requireRenderer().lineHeightAnimated(size);
     }
 
     public void clearCache() {
@@ -102,6 +138,19 @@ public final class Font {
         if (renderer != null) {
             renderer.setRgbSubpixel(enabled);
         }
+    }
+
+    public void setAnimatedRasterSize(float size) {
+        requireValidSize(size);
+        animatedRasterSize = size;
+
+        if (renderer != null) {
+            renderer.setAnimatedRasterSize(size);
+        }
+    }
+
+    public void warmupAnimated(String text) {
+        requireRenderer().warmupAnimated(text);
     }
 
     public boolean isInitialized() {
@@ -140,10 +189,7 @@ public final class Font {
     }
 
     private IllegalStateException notInitializedException() {
-        return new IllegalStateException(
-                "La font '" + source + "' n'est pas initialisée. "
-                        + "Appelle FontManager.initAll() après GL.createCapabilities()."
-        );
+        return new IllegalStateException("La font '" + source + "' n'est pas initialisée. " + "Appelle FontManager.initAll() après GL.createCapabilities().");
     }
 
     private InputStream openFontStream() throws IOException {
@@ -178,7 +224,48 @@ public final class Font {
         throw new IOException("Fichier introuvable : " + source +" Ressources testées : " + resourceCandidates + " Chemin disque testé : " + file.toAbsolutePath());
     }
 
+
+
+    private static void requireValidSize(float size) {
+        if (!(size > 0.0f) || Float.isInfinite(size) || Float.isNaN(size))
+            System.err.println("SKIP : Taille de texte invalide : " + size);
+
+    }
+
     private static void requireColor(Color color) {
         Objects.requireNonNull(color, "La couleur ne peut pas être null.");
+    }
+
+
+    public final class AnimatedSize {
+        @Getter
+        private float size;
+
+        private AnimatedSize() {
+        }
+
+        public void drawString(String text, float x, float y, Color color) {
+            Font.this.drawStringAnimated(text, x, y, size, color);
+        }
+
+        public void drawString(String text, float x, float y, int argb) {
+            Font.this.drawStringAnimated(text, x, y, size, argb);
+        }
+
+        public void drawStringBaseline(String text, float x, float baselineY, Color color) {
+            Font.this.drawStringBaselineAnimated(text, x, baselineY, size, color);
+        }
+
+        public void drawStringBaseline(String text, float x, float baselineY, int argb) {
+            Font.this.drawStringBaselineAnimated(text, x, baselineY, size, argb);
+        }
+
+        public float measureWidth(String text) {
+            return Font.this.measureWidthAnimated(text, size);
+        }
+
+        public float lineHeight() {
+            return Font.this.lineHeightAnimated(size);
+        }
     }
 }

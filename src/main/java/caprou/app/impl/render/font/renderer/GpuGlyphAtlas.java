@@ -26,6 +26,7 @@ public final class GpuGlyphAtlas {
     private int cursorX = OUTER_SPACING;
     private int cursorY = OUTER_SPACING;
     private int rowHeight;
+    private boolean linearFiltering;
 
     public GpuGlyphAtlas(int width, int height) {
         this.width = width;
@@ -128,6 +129,24 @@ public final class GpuGlyphAtlas {
         cursorX = OUTER_SPACING;
         cursorY = OUTER_SPACING;
         rowHeight = 0;
+    }
+
+
+    public void setLinearFiltering(boolean linear) {
+        if (linearFiltering == linear) return;
+
+        final int previousActiveTexture = glGetInteger(GL_ACTIVE_TEXTURE);
+        glActiveTexture(GL_TEXTURE0);
+        final int previousTexture = glGetInteger(GL_TEXTURE_BINDING_2D);
+
+        glBindTexture(GL_TEXTURE_2D, textureId);
+        final int filter = linear ? GL_LINEAR : GL_NEAREST;
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
+
+        glBindTexture(GL_TEXTURE_2D, previousTexture);
+        glActiveTexture(previousActiveTexture);
+        linearFiltering = linear;
     }
 
     public void bindFramebuffer() {
