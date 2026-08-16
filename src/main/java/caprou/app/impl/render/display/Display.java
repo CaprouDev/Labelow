@@ -66,7 +66,8 @@ public class Display {
 
         glfwDefaultWindowHints();
         glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-        glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+        glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+        glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
 
         window = glfwCreateWindow(width, height, title, NULL, NULL);
 
@@ -209,6 +210,14 @@ public class Display {
             return;
         }
         glfwSetWindowAttrib(window, GLFW_RESIZABLE, GLFW_FALSE);
+    }
+
+    public void setDecorated(boolean decorated) {
+        if(decorated){
+            glfwSetWindowAttrib(window, GLFW_DECORATED, GLFW_TRUE);
+            return;
+        }
+        glfwSetWindowAttrib(window, GLFW_DECORATED, GLFW_FALSE);
     }
 
     public int[] getCurrentMonitorSize() {

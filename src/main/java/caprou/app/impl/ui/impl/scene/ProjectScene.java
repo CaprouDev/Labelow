@@ -26,6 +26,7 @@ public class ProjectScene extends Scene implements Consts {
         display.setPosition(displayPosition[0], displayPosition[1]);
         display.setSize(width, height);
         display.setResizable(true);
+        display.setDecorated(true);
     }
 
     @Override
