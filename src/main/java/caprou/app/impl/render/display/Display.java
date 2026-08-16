@@ -1,13 +1,16 @@
 package caprou.app.impl.render.display;
 
 
+import caprou.app.Main;
 import caprou.app.impl.render.SimpleRenderer;
 import caprou.app.impl.render.animation.Animation;
 import caprou.app.impl.render.animation.Easing;
 import caprou.app.impl.render.font.renderer.FontManager;
 import caprou.app.impl.render.font.renderer.Fonts;
 import caprou.app.impl.render.shader.ShaderManager;
+import caprou.app.impl.ui.impl.scene.StartupScene;
 import lombok.Getter;
+import org.lwjgl.PointerBuffer;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.opengl.GL;
@@ -41,9 +44,6 @@ public class Display {
     final double tickRate = 1.0 / TICKS;
     double lastTick = glfwGetTime();
 
-    private final SimpleRenderer renderer = SimpleRenderer.getInstance();
-
-    private Animation animation = new Animation(Easing.EASE_IN_OUT_BACK, 1500);
 
 
     public Display(final String title, final int width, final int height) {
@@ -81,6 +81,28 @@ public class Display {
             OrthographicProjection.updateProjection(width, height);
         });
 
+        // Mouse event
+        glfwSetMouseButtonCallback(window, (window, button, action, mods) -> {
+            if (action == GLFW_PRESS) {
+                double[] xpos = new double[1];
+                double[] ypos = new double[1];
+                glfwGetCursorPos(window, xpos, ypos);
+
+                int mouseX = (int) xpos[0];
+                int mouseY = (int) ypos[0];
+
+                Main.getSceneManager().onMouseClicked(mouseX, mouseY, button);
+            }
+            if (action == GLFW_RELEASE) {
+                Main.getSceneManager().onMouseReleased();
+            }
+        });
+
+        // Scroll event
+        glfwSetScrollCallback(window, (win, xoffset, yoffset) -> {
+            Main.getSceneManager().onScroll(yoffset);
+        });
+
 
         try (MemoryStack stack = stackPush()) {
             final IntBuffer pWidth = stack.mallocInt(1);
@@ -94,6 +116,7 @@ public class Display {
                     (vidMode.height() - pHeight.get(0)) / 2);
         }
 
+
         glfwMakeContextCurrent(window); // passe le context => window
         glfwSwapInterval(vsync ? 1 : 0);
         glfwShowWindow(window);
@@ -105,9 +128,10 @@ public class Display {
 
         ShaderManager.compileShaders();
         OrthographicProjection.updateProjection(width, height);
-        renderer.init();
+        Main.getRenderer().init();
 
         FontManager.initAll();
+        Main.getSceneManager().setInitScene(new StartupScene());
 
 
         setWindowTitle(title);
@@ -130,10 +154,7 @@ public class Display {
 
             FontManager.beginFrame();
 
-            animation.loop(0,1);
-
-            renderer.drawRect(10,10,100,30,new Color(255,0,0));
-            Fonts.INTER.animateSize(30 + (float) animation.getValue() * 10).drawString("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ012345678910àé&'(-è_çàà)=$ù*!:", 10, 10, -1);
+            Main.getSceneManager().render((int) xpos[0], (int) ypos[0]);
 
             //FIN DU HOOK
 
@@ -173,6 +194,73 @@ public class Display {
             glfwSetWindowTitle(window, title);
         }
     }
+
+    public void setSize(int width, int height) {
+        glfwSetWindowSize(window, width, height);
+    }
+
+    public void setPosition(int x, int y) {
+        glfwSetWindowPos(window, x, y);
+    }
+
+    public void setResizable(boolean resizable) {
+        if(resizable){
+            glfwSetWindowAttrib(window, GLFW_RESIZABLE, GLFW_TRUE);
+            return;
+        }
+        glfwSetWindowAttrib(window, GLFW_RESIZABLE, GLFW_FALSE);
+    }
+
+    public int[] getCurrentMonitorSize() {
+        int[] windowX = new int[1];
+        int[] windowY = new int[1];
+        glfwGetWindowPos(window, windowX, windowY);
+
+        int[] windowWidth = new int[1];
+        int[] windowHeight = new int[1];
+        glfwGetWindowSize(window, windowWidth, windowHeight);
+
+        long bestMonitor = NULL;
+        int bestArea = 0;
+
+
+        PointerBuffer monitors = glfwGetMonitors();
+
+        for (int i = 0; i < monitors.limit(); i++) {
+            long monitor = monitors.get(i);
+
+            int[] monitorX = new int[1];
+            int[] monitorY = new int[1];
+            glfwGetMonitorPos(monitor, monitorX, monitorY);
+
+            GLFWVidMode mode = glfwGetVideoMode(monitor);
+            if (mode == null)
+                continue;
+
+            int overlapX = Math.max(0,
+                    Math.min(windowX[0] + windowWidth[0], monitorX[0] + mode.width())
+                            - Math.max(windowX[0], monitorX[0]));
+
+            int overlapY = Math.max(0,
+                    Math.min(windowY[0] + windowHeight[0], monitorY[0] + mode.height())
+                            - Math.max(windowY[0], monitorY[0]));
+
+            int area = overlapX * overlapY;
+
+            if (area > bestArea) {
+                bestArea = area;
+                bestMonitor = monitor;
+            }
+        }
+
+
+        if (bestMonitor == NULL)
+            return new int[]{width, height};
+
+        GLFWVidMode mode = glfwGetVideoMode(bestMonitor);
+        return new int[]{mode.width(), mode.height()};
+    }
+
 
 
 }
