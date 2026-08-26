@@ -7,7 +7,7 @@ import caprou.app.impl.render.animation.Easing;
 import caprou.app.impl.render.font.renderer.Fonts;
 import caprou.app.impl.render.util.time.TimeUtil;
 import caprou.app.impl.ui.Scene;
-import caprou.app.impl.ui.SceneManager;
+import caprou.app.impl.ui.impl.scene.projet.ProjectScene;
 
 import java.awt.*;
 
@@ -57,7 +57,7 @@ public class StartupScene extends Scene implements Consts {
         renderer.drawRound((float) (445 + (animation.getValue() * 130)), (float) (245 + (animation.getValue() * 130)),130,130, 65, new Color(106,212,67));
         renderer.drawRound((float) (375 + (animation.getValue() * 130)), (float) (300 + (animation.getValue() * 130)),130,130, 65, new Color(106,212,67));
 
-        if(timer.finished(1000)) {
+        if(timer.finished(2500)) {
             animation.run(1.0);
         }
 

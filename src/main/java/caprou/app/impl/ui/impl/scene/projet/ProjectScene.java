@@ -1,16 +1,12 @@
-package caprou.app.impl.ui.impl.scene;
+package caprou.app.impl.ui.impl.scene.projet;
 
-import caprou.app.Main;
 import caprou.app.impl.interfaces.Consts;
-import caprou.app.impl.render.animation.Animation;
-import caprou.app.impl.render.animation.Easing;
-import caprou.app.impl.render.font.renderer.Fonts;
-import caprou.app.impl.render.util.time.TimeUtil;
 import caprou.app.impl.ui.Scene;
 
 import java.awt.*;
 
 public class ProjectScene extends Scene implements Consts {
+
 
     @Override
     public void init() {
