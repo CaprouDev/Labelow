@@ -57,9 +57,6 @@ public final class GpuTextRenderer {
     private final Map<GlyphCacheKey, CachedGlyph> cache = new HashMap<>();
 
     @Getter
-    @Setter
-    private boolean rgbSubpixel = true;
-    @Getter
     private float animatedRasterSize = DEFAULT_ANIMATED_RASTER_SIZE;
     private long frameId;
 
@@ -111,7 +108,7 @@ public final class GpuTextRenderer {
                 }
 
                 final GlyphCacheKey key = new GlyphCacheKey(
-                        glyph.getIndex(), size64, 0, 0, false
+                        glyph.getIndex(), size64, 0, 0
                 );
 
                 CachedGlyph cachedGlyph = cache.get(key);
@@ -268,7 +265,7 @@ public final class GpuTextRenderer {
         final QuantizedPosition yPosition;
 
         if (animated) {
-            key = new GlyphCacheKey(glyph.getIndex(), Math.round(rasterSize * SIZE_STEPS), 0, 0, false);
+            key = new GlyphCacheKey(glyph.getIndex(), Math.round(rasterSize * SIZE_STEPS), 0, 0);
             rasterOffsetX = 0.0f;
             rasterOffsetY = 0.0f;
             xPosition = null;
@@ -279,7 +276,7 @@ public final class GpuTextRenderer {
             yPosition = quantizePosition(glyphTop);
             rasterOffsetX = xPosition.fraction();
             rasterOffsetY = yPosition.fraction();
-            key = new GlyphCacheKey(glyph.getIndex(), Math.round(rasterSize * SIZE_STEPS), xPosition.step(), yPosition.step(), rgbSubpixel);
+            key = new GlyphCacheKey(glyph.getIndex(), Math.round(rasterSize * SIZE_STEPS), xPosition.step(), yPosition.step());
         }
 
         CachedGlyph cachedGlyph = cache.get(key);
@@ -411,7 +408,6 @@ public final class GpuTextRenderer {
             rasterShader.setUniform("glyphBounds", (float) glyph.getXMin(), (float) glyph.getYMin(), (float) glyph.getXMax(), (float) glyph.getYMax());
             rasterShader.setUniform("fontScale", cachedGlyph.fontScale);
             rasterShader.setUniform("glyphOffsetPx", GLYPH_PADDING + cachedGlyph.offsetX, GLYPH_PADDING + cachedGlyph.offsetY);
-            rasterShader.setUniform("rgbSubpixel", cachedGlyph.key.rgbSubpixel() ? 1 : 0);
             rasterShader.setUniform("sampleBase", cachedGlyph.accumulatedSamples);
             rasterShader.setUniform("samplesPerPass", samplesThisPass);
             quad.render();

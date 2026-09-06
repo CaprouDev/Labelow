@@ -20,9 +20,6 @@ public final class Font {
     private final String source;
     @Getter
     private final int atlasSize;
-
-    @Getter
-    private boolean rgbSubpixel = true;
     @Getter
     private float animatedRasterSize = GpuTextRenderer.DEFAULT_ANIMATED_RASTER_SIZE;
     private TrueTypeFont trueTypeFont;
@@ -55,7 +52,6 @@ public final class Font {
         try (InputStream stream = openFontStream()) {
             trueTypeFont = new TrueTypeFontReader().parseFont(stream);
             renderer = new GpuTextRenderer(trueTypeFont, atlasSize);
-            renderer.setRgbSubpixel(rgbSubpixel);
             renderer.setAnimatedRasterSize(animatedRasterSize);
         } catch (Exception exception) {
             trueTypeFont = null;
@@ -133,12 +129,6 @@ public final class Font {
         requireRenderer().clearCache();
     }
 
-    public void setRgbSubpixel(boolean enabled) {
-        rgbSubpixel = enabled;
-        if (renderer != null) {
-            renderer.setRgbSubpixel(enabled);
-        }
-    }
 
     public void setAnimatedRasterSize(float size) {
         requireValidSize(size);

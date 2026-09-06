@@ -44,18 +44,13 @@ public final class RenderUtil {
         GL11.glPopMatrix();
     }
 
-    public static void drawRect(final float x, final float y, final float width, final float height, final Color color) {
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    public static void scale(Runnable run, float x, float y, double xScale, double yScale) {
+        GL11.glPushMatrix();
+        GL11.glTranslatef(x, y, 0);
+        GL11.glScalef((float) xScale, (float) yScale, 1);
+        GL11.glTranslatef(-(x), -(y), 0);
+        run.run();
 
-        color(color);
-        render(GL_QUADS, () -> {
-            glVertex2d(x, y);
-            glVertex2d(x + width, y);
-            glVertex2d(x + width, y + height);
-            glVertex2d(x, y + height);
-        });
-
-        glDisable(GL_BLEND);
+        GL11.glPopMatrix();
     }
 }

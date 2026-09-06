@@ -4,6 +4,5 @@ public record GlyphCacheKey(
         int glyphIndex,
         int size64,
         int subpixelX,
-        int subpixelY,
-        boolean rgbSubpixel
+        int subpixelY
 ) { }

@@ -51,13 +51,13 @@ public class StartupScene extends Scene implements Consts {
         final Color mint = new Color(168,251,171,(int) (255 * (1-animation.getValue())));
 
         Fonts.INSTRUMENT_SERIF.drawString(Main.getAppName(), (float) (33 - 300*animation.getValue()),105,96, black);
-        Fonts.INTER.drawString(Main.getAppVersion(), (float) (35 - 300*animation.getValue()),218,14, black);
+        //Fonts.INTER.drawString(Main.getAppVersion(), (float) (35 - 300*animation.getValue()),218,14, black);
         renderer.drawRect((float) (35 - 300*animation.getValue()),211,80,5, mint);
 
         renderer.drawRound((float) (445 + (animation.getValue() * 130)), (float) (245 + (animation.getValue() * 130)),130,130, 65, new Color(106,212,67));
         renderer.drawRound((float) (375 + (animation.getValue() * 130)), (float) (300 + (animation.getValue() * 130)),130,130, 65, new Color(106,212,67));
 
-        if(timer.finished(2500)) {
+        if(timer.finished(0)) {
             animation.run(1.0);
         }
 

@@ -11,7 +11,6 @@ uniform vec4 glyphBounds;
 uniform float fontScale;
 uniform vec2 glyphOffsetPx;
 
-uniform int rgbSubpixel;
 uniform int sampleBase;
 uniform int samplesPerPass;
 
@@ -114,19 +113,10 @@ void main() {
         int absoluteSample = sampleBase + localSample;
         vec2 randomValue = random2(pixel, absoluteSample);
 
-        if (rgbSubpixel != 0) {
-            const float regionWidth = 0.55;
-            float redX   = 1.0 / 6.0 + (randomValue.x - 0.5) * regionWidth;
-            float greenX = 0.5       + (randomValue.x - 0.5) * regionWidth;
-            float blueX  = 5.0 / 6.0 + (randomValue.x - 0.5) * regionWidth;
 
-            coverage.r += sampleCoverage(pixel + vec2(redX, randomValue.y));
-            coverage.g += sampleCoverage(pixel + vec2(greenX, randomValue.y));
-            coverage.b += sampleCoverage(pixel + vec2(blueX, randomValue.y));
-        } else {
-            float value = sampleCoverage(pixel + randomValue);
-            coverage += vec3(value);
-        }
+        float value = sampleCoverage(pixel + randomValue);
+        coverage += vec3(value);
+
     }
 
     coverage /= float(samplesPerPass);

@@ -24,10 +24,13 @@ import static org.lwjgl.opengl.GL11.*;
 public class ImageObject implements Shaders {
     private final Texture texture;
 
-
     public ImageObject(final String imageName) {
+        this(imageName, false);
+    }
+
+    public ImageObject(final String imageName, boolean pixelated) {
         final InputStream inputStream = FileUtil.getInputStream("/images/" + imageName);
-        this.texture = new Texture(inputStream, false);
+        this.texture = new Texture(inputStream, pixelated);
     }
 
     public final void load() {
