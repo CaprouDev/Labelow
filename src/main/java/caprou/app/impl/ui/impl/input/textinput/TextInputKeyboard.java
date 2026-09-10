@@ -19,9 +19,8 @@ public final class TextInputKeyboard {
     }
 
     public void keyPressed(int keyCode) {
-        if (!state.isFocused()) {
+        if (!state.isFocused())
             return;
-        }
 
         if (KeyCodes.isCtrl(keyCode)) {
             state.setCtrlPressed(true);

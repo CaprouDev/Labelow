@@ -19,7 +19,7 @@ public class ProjectScene extends Scene implements Consts {
 
     private final Animation widthAnimation = new Animation(Easing.EASE_OUT_EXPO, 500);
 
-    private final TextInput textInput = new TextInput("Blablabla",2,400);
+    private final TextInput textInput = new TextInput("Blablabla",2,440, 336, 400);
 
     @Override
     public void init() {

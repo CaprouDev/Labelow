@@ -1,5 +1,10 @@
 package caprou.app.impl.ui.impl.input.textinput;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Setter
+@Getter
 public final class TextInputState {
     private String text = "";
     private int cursorPosition;
@@ -7,10 +12,6 @@ public final class TextInputState {
     private boolean focused;
     private boolean ctrlPressed;
     private boolean shiftPressed;
-
-    public String getText() {
-        return text;
-    }
 
     public void setText(String text) {
         this.text = text == null ? "" : text;
@@ -20,28 +21,12 @@ public final class TextInputState {
         }
     }
 
-    public int getCursorPosition() {
-        return cursorPosition;
-    }
-
     public void setCursorPosition(int position) {
         cursorPosition = clamp(position);
     }
 
-    public boolean isFocused() {
-        return focused;
-    }
-
-    public void setFocused(boolean focused) {
-        this.focused = focused;
-    }
-
     public boolean hasSelection() {
         return selectionAnchor >= 0 && selectionAnchor != cursorPosition;
-    }
-
-    public int getSelectionAnchor() {
-        return selectionAnchor;
     }
 
     public void setSelectionAnchor(int position) {
@@ -58,22 +43,6 @@ public final class TextInputState {
 
     public int getSelectionEnd() {
         return Math.max(selectionAnchor, cursorPosition);
-    }
-
-    public boolean isCtrlPressed() {
-        return ctrlPressed;
-    }
-
-    public void setCtrlPressed(boolean ctrlPressed) {
-        this.ctrlPressed = ctrlPressed;
-    }
-
-    public boolean isShiftPressed() {
-        return shiftPressed;
-    }
-
-    public void setShiftPressed(boolean shiftPressed) {
-        this.shiftPressed = shiftPressed;
     }
 
     public void selectAll() {

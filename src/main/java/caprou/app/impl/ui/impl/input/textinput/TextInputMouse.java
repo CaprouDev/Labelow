@@ -43,6 +43,7 @@ public final class TextInputMouse {
         state.setFocused(hovered);
 
         if (!hovered) {
+            state.clearSelection();
             clickCount = 0;
             dragging = false;
             return false;
@@ -77,9 +78,8 @@ public final class TextInputMouse {
     }
 
     public void update(int mouseX, int mouseY) {
-        if (!dragging || !state.isFocused()) {
+        if (!dragging || !state.isFocused())
             return;
-        }
 
         state.setCursorPosition(getCursorPosition(mouseX, mouseY));
     }
@@ -112,7 +112,8 @@ public final class TextInputMouse {
     }
 
     private void selectCurrentWord(int cursorPosition) {
-        String text = state.getText();
+        final String text = state.getText();
+
         if (text.isEmpty()) {
             state.clearSelection();
             return;

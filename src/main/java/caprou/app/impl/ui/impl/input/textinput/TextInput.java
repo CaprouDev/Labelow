@@ -25,7 +25,7 @@ public final class TextInput implements Consts {
     private float x;
     private float y;
 
-    public TextInput(String placeholderText, int numberLines, float width) {
+    public TextInput(String placeholderText, int numberLines, double x, double y, float width) {
         this.placeholderText = placeholderText;
         this.numberLines = Math.max(1, numberLines);
         this.width = width;
@@ -34,7 +34,7 @@ public final class TextInput implements Consts {
         this.state = new TextInputState();
         this.layout = new TextInputLayout(width, this.numberLines, TEXT_SIZE, HORIZONTAL_PADDING);
         this.clipboard = new ClipboardManager();
-        this.textRenderer = new TextInputRenderer(placeholderText, LINE_HEIGHT, TEXT_SIZE, MARGIN, HORIZONTAL_PADDING);
+        this.textRenderer = new TextInputRenderer(placeholderText, LINE_HEIGHT, TEXT_SIZE, MARGIN, HORIZONTAL_PADDING, x, y);
         this.keyboard = new TextInputKeyboard(state, layout, clipboard, textRenderer::resetBlink);
         this.mouse = new TextInputMouse(state, layout, MARGIN, LINE_HEIGHT, width, height);
     }

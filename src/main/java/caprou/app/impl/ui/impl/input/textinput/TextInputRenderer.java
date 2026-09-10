@@ -25,11 +25,12 @@ public final class TextInputRenderer implements Consts {
 
     private final Animation cursorXAnimation;
     private final Animation cursorYAnimation;
+    private final Animation charCountAnimation;
 
     private long lastBlinkTime = System.currentTimeMillis();
     private boolean cursorVisible = true;
 
-    public TextInputRenderer(String placeholder, int fontSize, int textSize, int margin, int horizontalPadding) {
+    public TextInputRenderer(String placeholder, int fontSize, int textSize, int margin, int horizontalPadding, double x, double y) {
         this.placeholder = placeholder;
         this.fontSize = fontSize;
         this.textSize = textSize;
@@ -39,6 +40,9 @@ public final class TextInputRenderer implements Consts {
 
         this.cursorXAnimation = new Animation(Easing.EASE_OUT_EXPO, 300);
         this.cursorYAnimation = new Animation(Easing.EASE_OUT_EXPO, 300);
+        this.charCountAnimation = new Animation(Easing.EASE_IN_OUT_QUAD, 1000);
+        this.cursorXAnimation.setValue(x);
+        this.cursorYAnimation.setValue(y);
     }
 
     public void resetBlink() {
@@ -57,6 +61,7 @@ public final class TextInputRenderer implements Consts {
         }
 
         drawText(x, y, state, lines);
+        drawCharCount(x, y, width, height, state);
 
         if (state.getText().isEmpty() && !state.isFocused()) {
             Fonts.INTER.drawString(placeholder, x + horizontalPadding, y + margin, textSize, PLACEHOLDER_COLOR);
@@ -65,6 +70,18 @@ public final class TextInputRenderer implements Consts {
         if (state.isFocused()) {
             drawCursor(x, y, state, lines, layout);
         }
+    }
+
+    private void drawCharCount(float x, float y, float width, float height, TextInputState state) {
+        final String text = state.getText();
+        final int charCount = text.length();
+        final float countSize = Fonts.INTER.measureWidth(""+charCount, 8);
+
+        charCountAnimation.run(text.isEmpty() ? 0 : 255);
+
+        Fonts.INTER.drawString(""+charCount, x + width - countSize, y + height + 5, 8, new Color(135,135,135, (int) charCountAnimation.getValue()));
+
+
     }
 
     private void drawText(float x, float y, TextInputState state, List<TextLine> lines) {
