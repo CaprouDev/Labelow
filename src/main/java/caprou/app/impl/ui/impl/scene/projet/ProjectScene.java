@@ -2,12 +2,11 @@ package caprou.app.impl.ui.impl.scene.projet;
 
 import caprou.app.Main;
 import caprou.app.impl.interfaces.Consts;
-import caprou.app.impl.render.SimpleRenderer;
 import caprou.app.impl.render.animation.Animation;
 import caprou.app.impl.render.animation.Easing;
 import caprou.app.impl.render.font.renderer.Fonts;
-import caprou.app.impl.render.util.RenderUtil;
 import caprou.app.impl.ui.Scene;
+import caprou.app.impl.ui.impl.input.textinput.TextInput;
 import caprou.app.impl.ui.impl.scene.projet.impl.ProjectBanner;
 import caprou.app.impl.ui.impl.scene.projet.impl.ProjectButton;
 
@@ -19,6 +18,8 @@ public class ProjectScene extends Scene implements Consts {
     private final ProjectBanner projectBanner = new ProjectBanner();
 
     private final Animation widthAnimation = new Animation(Easing.EASE_OUT_EXPO, 500);
+
+    private final TextInput textInput = new TextInput("Blablabla",2,400);
 
     @Override
     public void init() {
@@ -69,6 +70,8 @@ public class ProjectScene extends Scene implements Consts {
         renderer.drawRound(projectMargin, 16 + 30 + 22 + 200 + 32, 295,360,25, new Color(15,15,15));
         Fonts.LORA_BOLD.drawString("Urban Traffic",24 + 20,16 + 30 + 22 + 200 + 32 + 275,18, Color.WHITE);
         Fonts.INTER.drawString("Detection of vehicles and pedest...",24 + 20,575 + 25,12, new Color(255,255,255,100));
+
+        textInput.draw(414 + 28,336,mouseX,mouseY);
     }
 
     @Override
@@ -78,26 +81,28 @@ public class ProjectScene extends Scene implements Consts {
 
     @Override
     public void onMouseClicked(int mouseX, int mouseY, int mouseButton) {
-
+        textInput.mouseClicked(mouseX,mouseY,mouseButton);
         projectButton.mouseClicked(mouseX,mouseY,mouseButton);
     }
 
     @Override
     public void onMouseReleased() {
-
+        textInput.mouseReleased();
     }
 
     @Override
-    public void onKeyPressed(int keyCode, char c) {
-
+    public void onKeyPressed(int keyCode) {
+        textInput.keyTyped(keyCode);
     }
 
     @Override
     public void onKeyReleased(int keyCode) {
-
+        textInput.onKeyReleased(keyCode);
     }
 
-    private void load() {
-
+    @Override
+    public void onChar(char c) {
+        textInput.onChar(c);
     }
+
 }

@@ -33,8 +33,11 @@ public class SceneManager implements Consts {
         currentScene.onMouseReleased();
     }
 
-    public void onKeyPressed(int keyCode, char c) {
-        if(currentScene != null) currentScene.onKeyPressed(keyCode, c);
+    public void onKeyPressed(int keyCode) {
+        if(currentScene != null) currentScene.onKeyPressed(keyCode);
+    }
+    public void onChar(char c) {
+        if(currentScene != null) currentScene.onChar(c);
     }
 
     public void onKeyReleased(int keyCode) {

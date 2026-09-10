@@ -2,13 +2,9 @@ package caprou.app.impl.render.display;
 
 
 import caprou.app.Main;
-import caprou.app.impl.render.SimpleRenderer;
-import caprou.app.impl.render.animation.Animation;
-import caprou.app.impl.render.animation.Easing;
 import caprou.app.impl.render.font.renderer.FontManager;
-import caprou.app.impl.render.font.renderer.Fonts;
 import caprou.app.impl.render.shader.ShaderManager;
-import caprou.app.impl.ui.impl.scene.StartupScene;
+import caprou.app.impl.ui.impl.scene.startup.StartupScene;
 import lombok.Getter;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.glfw.GLFWErrorCallback;
@@ -16,7 +12,6 @@ import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.system.MemoryStack;
 
-import java.awt.*;
 import java.nio.IntBuffer;
 
 import static java.lang.System.exit;
@@ -43,6 +38,7 @@ public class Display {
     final double TICKS = 10.0;
     final double tickRate = 1.0 / TICKS;
     double lastTick = glfwGetTime();
+
 
 
 
@@ -97,6 +93,22 @@ public class Display {
             if (action == GLFW_RELEASE) {
                 Main.getSceneManager().onMouseReleased();
             }
+        });
+
+
+        //Key event
+        glfwSetKeyCallback(window, (window, key, scancode, action, mods) -> {
+            if (action == GLFW_PRESS || action == GLFW_REPEAT) {
+                Main.getSceneManager().onKeyPressed(key);
+            }
+            if (action == GLFW_RELEASE) {
+                Main.getSceneManager().onKeyReleased(key);
+            }
+        });
+
+        //Char event
+        glfwSetCharCallback(window, (window, codepoint) -> {
+            Main.getSceneManager().onChar((char) codepoint);
         });
 
         // Scroll event
